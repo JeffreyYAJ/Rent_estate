@@ -30,7 +30,7 @@ export default function AvailableProps({ properties, loading, onToggleFavorite }
   return (
     <section className="py-6 px-4 bg-gray-50">
       <div className="flex justify-between items-center mb-6">
-         <h2 className="text-2xl font-bold text-zinc-950">Proprietes Disponible</h2>
+         <h2 className="text-2xl font-bold text-zinc-950">Available Listings</h2>
       </div>
 
       {loading ? (

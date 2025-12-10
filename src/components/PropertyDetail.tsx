@@ -1,20 +1,30 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { FaHouse, FaBed } from "react-icons/fa6";
-import { useNavigate } from "react-router-dom";
 import React from "react";
 import WaitingPage from "./WaitingPage";
-// 1. Import de la nouvelle composante Map
-import SingleMap from "./SingleMap"; 
+import SingleMap from "./SingleMap";
+import ImageCarousel from "./ImageCarrousel";
+import ImageLightbox from "./ImageLightBox"; // Import du nouveau modal
 
 export default function PropertyDetail() {
   const { id } = useParams();
   const [property, setProperty] = useState<any>(null);
   const [contactOpen, setContactOpen] = useState(false);
+  
+  // États pour le modal d'images
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
   const navigate = useNavigate();
 
+  useEffect(() => {
+    fetch(`http://localhost:8000/api/properties/${id}/`)
+      .then((res) => res.json())
+      .then(setProperty);
+  }, [id]);
+
   const handleStartChat = () => {
-    // Vérification de sécurité
     if (!property || !property.landlord) {
         alert("Impossible de contacter le propriétaire.");
         return;
@@ -23,68 +33,81 @@ export default function PropertyDetail() {
       state: { 
         propertyId: property.id,
         propertyTitle: property.title,
-        propertyImage: property.primary_photo?.url || property.primary_photo?.image, // Gère les deux cas
-        landlordName: property.landlord.full_name || property.landlord.first_name // Fallback
+        propertyImage: property.primary_photo?.url,
+        landlordName: property.landlord.full_name || "Propriétaire"
       } 
     });
   };
-  useEffect(() => {
-    fetch(`http://localhost:8000/api/properties/${id}/`)
-      .then((res) => res.json())
-      .then(setProperty);
-  }, [id]);
 
   if (!property) return <div><WaitingPage/></div>;
 
+  // Préparation des photos
+  const galleryPhotos = property.photos && property.photos.length > 0 
+      ? property.photos 
+      : property.primary_photo 
+          ? [property.primary_photo] 
+          : [];
+
+  // Fonction appelée quand on clique sur le carrousel
+  const openLightbox = (index: number) => {
+    setLightboxIndex(index);
+    setIsLightboxOpen(true);
+  };
+
   return (
     <div className="pt-20 h-screen flex flex-col overflow-hidden">
-      {/* Ajout de overflow-y-auto pour que la page défile */}
       <div className="h-full w-full bg-white text-gray-900 p-6 md:p-10 overflow-y-auto">
         
-        {/* Title */}
+        {/* 1. TITLE & ADDRESS */}
         <h1 className="text-3xl md:text-5xl font-bold max-w-3xl leading-tight">
           {property.title}
         </h1>
-
-        {/* Address */}
-        <div className="flex items-center gap-2 mt-3 text-gray-600">
-          <span>{property.address?.full_address}</span>
+        <div className="flex items-center gap-2 mt-3 text-gray-600 mb-6">
+          <span className="text-lg">{property.address?.full_address}</span>
         </div>
 
-        {/* Icons Row */}
-        <div className="flex flex-wrap gap-6 mt-8">
+        {/* 2. CARROUSEL (Juste en dessous du titre) */}
+        <div className="mb-8 rounded-xl overflow-hidden shadow-sm">
+            <ImageCarousel 
+                photos={galleryPhotos} 
+                altTitle={property.title} 
+                onImageClick={openLightbox} // Active le clic
+            />
+        </div>
+
+        {/* 3. ICONS ROW (Ton ancien layout) */}
+        <div className="flex flex-wrap gap-6 mb-10">
           <div className="flex items-center gap-3 bg-gray-100 px-4 py-2 rounded-xl text-gray-700">
             <FaHouse className="text-2xl" />
-            {/* Correction : Affichage dynamique de la surface */}
             <span className="font-medium">{property.surface} m²</span>
           </div>
           <div className="flex items-center gap-3 bg-gray-100 px-4 py-2 rounded-xl text-gray-700">
             <FaBed className="text-2xl" />
-            {/* Correction : Affichage dynamique des chambres */}
             <span className="font-medium">{property.number_of_bedrooms} Ch.</span>
           </div>
         </div>
 
-        <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-10">
+        {/* 4. GRID LAYOUT */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+          
           {/* Left content */}
           <div className="md:col-span-2">
-            <h2 className="text-xl font-bold mb-4">About this listing</h2>
+            <h2 className="text-xl font-bold mb-4">À propos de ce logement</h2>
             <p className="font-semibold text-gray-800">
-                {property.type === 'APARTMENT' ? 'Entire apartment' : property.type}
+                {property.type === 'APARTMENT' ? 'Appartement Entier' : property.type}
             </p>
 
             <p className="mt-6 text-gray-700 leading-relaxed whitespace-pre-line">
               {property.description}
             </p>
 
-            {/* --- NOUVELLE SECTION : MAP --- */}
+            {/* MAP */}
             {property.address?.latitude && property.address?.longitude && (
-              <div className="mt-10">
+              <div className="mt-10 pt-10 border-t border-gray-100">
                 <h3 className="text-xl font-bold mb-4">Localisation</h3>
                 <p className="text-gray-500 mb-4 text-sm">
-                    Situé à {property.address.district}, {property.address.city}
+                    {property.address.district}, {property.address.city}
                 </p>
-                {/* Conteneur avec hauteur définie (très important) */}
                 <div className="h-80 w-full rounded-2xl overflow-hidden shadow-md border border-gray-200">
                   <SingleMap 
                     lat={property.address.latitude} 
@@ -94,70 +117,27 @@ export default function PropertyDetail() {
                 </div>
               </div>
             )}
-            {/* ----------------------------- */}
 
-            <h3 className="text-lg font-bold mt-10 mb-3">Additional Information</h3>
+            <h3 className="text-lg font-bold mt-10 mb-3">Informations complémentaires</h3>
             <p className="text-gray-700 leading-relaxed">
-               {/* Ici tu pourras mettre d'autres infos plus tard */}
-               Propriété vérifiée et publiée le {new Date(property.published_at).toLocaleDateString()}.
+               Propriété publiée le {new Date(property.published_at || Date.now()).toLocaleDateString()}.
             </p>
           </div>
 
           {/* Right sidebar (Sticky) */}
-          <div className="relative">
-            <aside className="border rounded-2xl shadow-sm p-6 sticky top-10">
-              <p className="text-sm text-gray-500 font-semibold">PRIX</p>
-              <p className="text-3xl font-bold mt-1">
-                {parseInt(property.monthly_rent).toLocaleString()} FCFA
-                <span className="text-base font-medium text-gray-500 ml-1">/ mois</span>
-              </p>
-
-              <button
-                className="mt-6 w-full bg-green-600 text-white font-semibold py-3 rounded-xl hover:bg-green-700 transition relative"
-                onClick={() => setContactOpen((v) => !v)}
-                type="button"
-              >
-                Contacter le propriétaire
-              </button>
-
-              {/* Dropdown menu */}
-              {contactOpen && (
-                <div className="absolute left-0 right-0 mt-2 bg-white border rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                  <button
-                    className="block w-full text-left px-6 py-3 hover:bg-gray-100 transition"
-                    onClick={handleStartChat} 
-                  >
-                    Messagerie Intégrée
-                  </button>
-                  
-                  {/* Lien WhatsApp Sécurisé */}
-                  {property.landlord?.phone ? (
-                      <a
-                        className="block w-full text-left px-6 py-3 hover:bg-green-50 text-green-700 font-medium transition"
-                        href={`https://wa.me/${property.landlord.phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
-                          `Bonjour, je suis intéressé par votre propriété "${property.title}" située à ${property.address?.full_address}.`
-                        )}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => setContactOpen(false)}
-                      >
-                        WhatsApp
-                      </a>
-                  ) : (
-                      <span className="block px-6 py-3 text-gray-400 text-sm italic">
-                          Numéro non disponible
-                      </span>
-                  )}
-                </div>
-              )}
-
-              <p className="text-center mt-4 text-gray-500 text-xs">
-                 Aucun frais ne sera débité pour la prise de contact.
-              </p>
-            </aside>
-          </div>
+          
         </div>
       </div>
+
+      {/* --- LE MODAL LIGHTBOX --- */}
+      {isLightboxOpen && (
+        <ImageLightbox 
+            photos={galleryPhotos} 
+            startIndex={lightboxIndex} 
+            onClose={() => setIsLightboxOpen(false)} 
+        />
+      )}
+
     </div>
   );
 }

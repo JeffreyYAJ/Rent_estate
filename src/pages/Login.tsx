@@ -36,9 +36,10 @@ export default function Login() {
         
         localStorage.setItem("token", token);
         
+        
         // Optionnel : stocker le nom d'utilisateur si besoin
         localStorage.setItem("user_name", email);
-
+        localStorage.setItem("user_id", data.user_id);
         // 3. Redirection vers la page des propriétés
         navigate("/properties");
       } else {

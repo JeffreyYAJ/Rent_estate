@@ -3,10 +3,11 @@ import { useSearchParams } from "react-router-dom";
 import FilterBar from "./FilterBar";
 import AvailableProps, { Property } from "./AvaliableProps"; 
 import PriceMap from "./PriceMap";
-import { useParams, useNavigate } from "react-router-dom";
+
 
 export default function PropertyPage() {
   const [searchParams] = useSearchParams();
+  
   
   // États centralisés ici
   const [properties, setProperties] = useState<Property[]>([]);
@@ -36,6 +37,8 @@ export default function PropertyPage() {
   const handleFilterChange = (newFilters: any) => {
     setFilters(newFilters);
   };
+
+
 
   const handleToggleFavorite = async (propertyId: number, isFavorite: boolean) => {
     const token = localStorage.getItem("token");
